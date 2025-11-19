@@ -1,4 +1,7 @@
 export async function getHistory(state: DurableObjectState) {
-	const history = (await state.storage.get<string[]>('messages')) || [];
-	return Response.json({ history });
+  const all = await state.storage.list(); 
+  const history: string[] = Array.from(all.values()).map(v => v as string);
+  return new Response(JSON.stringify({ history }), {
+    headers: { "Content-Type": "application/json" }
+  });
 }

@@ -1,27 +1,27 @@
+import { streamText } from "ai";
+import { createWorkersAI } from "workers-ai-provider";
+
 export class AIService {
-  env: Env;
+  constructor(private env: Env) {}
 
-  constructor(env: Env) {
-    this.env = env;
+  buildPrompt(history: string[], userMessage: string) {
+    return [
+      { role: "system", content: "You are a helpful AI assistant." },
+      ...history.map((msg) => ({ role: "user", content: msg })),
+      { role: "user", content: userMessage },
+    ];
   }
 
-  buildPrompt(history: string[], message: string) {
-    console.log("buildPrompt:", { history, message });
-    return `
-You are a helpful AI.
-Chat history:
-${history.join("\n")}
-User: ${message}
-AI:
-    `.trim();
-  }
-
-  async getAIResponse(prompt: string) {
-    const aiResponse = await this.env.AI.run("@cf/meta/llama-3-8b-instruct", {
-      prompt,
-      max_tokens: 50
+  async streamAIResponse(prompt: string) {
+    const workers = createWorkersAI({
+      binding: this.env.AI, // Your Workers AI binding
+      
     });
 
-    return aiResponse.response;
+    return streamText({
+      model: workers("@cf/meta/llama-3-8b-instruct"), // correct model
+      prompt,
+
+    });
   }
 }

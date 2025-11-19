@@ -14,5 +14,9 @@
 		"typescript": "^5.5.2",
 		"vitest": "~3.2.0",
 		"wrangler": "^4.49.0"
+	},
+	"dependencies": {
+		"agents": "^0.2.23",
+		"workers-ai-provider": "^2.0.0"
 	}
 }
