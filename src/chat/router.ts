@@ -1,25 +1,27 @@
-import { addMessage } from "./handlers/addMessage";
-import { getHistory } from "./handlers/clearHistory";
-import { clearHistory } from "./handlers/getHistory";
-import { getSize } from "./handlers/getSize";
+import { addMessage } from './handlers/addMessage';
+import { clearHistory } from './handlers/clearHistory';
+import { getHistory } from './handlers/getHistory';
+import { getSize } from './handlers/getSize';
 
 export async function routeChat(state: DurableObjectState, request: Request) {
-  const url = new URL(request.url);
+	const url = new URL(request.url);
+	const path = url.pathname.replace(/\/+$/, '');
+    const method = request.method.toUpperCase();
 
-  switch (true) {
-    case url.pathname === "/chat" && request.method === "POST":
-      return addMessage(state, request);
+	switch (true) {
+		case path === '/chat' && method === 'POST':
+			return addMessage(state, request);
 
-    case url.pathname === "/chat/history" && request.method === "GET":
-      return getHistory(state);
+		case path === '/chat/history' && method === 'GET':
+			return getHistory(state);
 
-    case url.pathname === "/chat/history" && request.method === "DELETE":
-      return clearHistory(state);
+		case path === '/chat/history' && method === 'DELETE':
+			return clearHistory(state);
 
-    case url.pathname === "/chat/size":
-      return getSize(state);
+		case path === '/chat/size':
+			return getSize(state);
 
-    default:
-      return new Response("Not found", { status: 404 });
-  }
+		default:
+			return new Response('Not found', { status: 404 });
+	}
 }

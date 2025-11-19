@@ -6,6 +6,7 @@ export class AIService {
   }
 
   buildPrompt(history: string[], message: string) {
+    console.log("buildPrompt:", { history, message });
     return `
 You are a helpful AI.
 Chat history:
