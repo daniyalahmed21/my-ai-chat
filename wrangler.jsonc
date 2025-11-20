@@ -23,13 +23,6 @@
 			"new_classes": ["ChatHistory"]
 		}
 	],
-	"rules": [
-		{
-			"type": "Text",
-			"globs": ["**/*.html"],
-			"fallthrough": true
-		}
-	],
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"
