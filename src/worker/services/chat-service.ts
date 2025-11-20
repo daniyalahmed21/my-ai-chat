@@ -19,7 +19,7 @@ export class ChatService {
 				method: 'POST',
 				body: JSON.stringify({ message }),
 				headers: { 'Content-Type': 'application/json' },
-			})
+			}),
 		);
 	}
 
@@ -34,5 +34,22 @@ export class ChatService {
 		} catch {
 			return [];
 		}
+	}
+
+	async saveSummary(summary: string) {
+		await this.env.CHAT_HISTORY.get(this.env.CHAT_HISTORY.idFromName(this.userId)).fetch(
+			new Request('https://dummy/chat/summary', {
+				method: 'POST',
+				body: JSON.stringify({ summary }),
+			}),
+		);
+	}
+
+	async getSummary(): Promise<string | null> {
+		const resp = await this.env.CHAT_HISTORY.get(this.env.CHAT_HISTORY.idFromName(this.userId)).fetch(
+			new Request('https://dummy/chat/summary', { method: 'GET' }),
+		);
+		if (resp.status === 200) return await resp.text();
+		return null;
 	}
 }

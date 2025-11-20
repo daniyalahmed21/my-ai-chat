@@ -1,39 +1,79 @@
-import { ChatService } from './chat-service';
-import { AIService } from './ai-service';
-import { checkRateLimit } from './rateLimiter';
-import { validateMessage } from './messageValidator';
-import { buildPrompt, flattenPrompt } from './promptBuilder';
-import { getAIStream } from './streaming';
+import { AIService } from "./services/ai-service";
+import { ChatService } from "./services/chat-service";
+import { validateMessage } from "./utils/messageValidator";
+import { buildPrompt } from "./utils/promptBuilder";
+import { checkRateLimit } from "./utils/rateLimiter";
+import { getAIStream } from "./utils/streaming";
 
-export async function handleChatPOST(request: Request, env: Env, userId: string) {
-	try {
-		await checkRateLimit(env, userId);
+export async function handleChatPOST(
+  request: Request,
+  env: Env,
+  userId: string
+) {
+  try {
+    // 🔹 Rate limiting
+    await checkRateLimit(env, userId);
 
-		const { message } = (await request.json()) as { message: string };
-		validateMessage(message);
+    // 🔹 Validate user input
+    const { message } = (await request.json()) as { message: string };
+    validateMessage(message);
 
-		const chat = new ChatService(env, userId);
-		const ai = new AIService(env);
+    const chat = new ChatService(env, userId);
+    const ai = new AIService(env);
 
-		await chat.addMessage(message);
-		const history = await chat.getHistory();
+    // Save user message
+    await chat.addMessage(message);
 
-		const messages = buildPrompt(history, message);
-		const promptText = flattenPrompt(messages);
+    // Load chat history & summary
+    const history = await chat.getHistory();
+    const summary = await chat.getSummary();
 
-		const { streamResponse, result } = await getAIStream(ai, promptText);
+    // -----------------------------
+    // 🔹 STREAMING AI RESPONSE
+    // -----------------------------
+    const { streamResponse, finalTextPromise } = await getAIStream(
+      ai,
+      history,
+      message,
+      summary || undefined
+    );
 
-		async function saveFinalAIResponse(chat: ChatService, result: any) {
-			const finalText = await result.text();
-			await chat.addMessage(finalText);
-		}
+    // ✅ Use waitUntil to save final response without blocking the stream
+    if (env.ctx?.waitUntil) {
+      env.ctx.waitUntil(
+        (async () => {
+          try {
+            const finalText = await finalTextPromise;
+            await chat.addMessage(finalText);
 
-		saveFinalAIResponse(chat, result);
+            // Generate and save new summary
+            const updatedHistory = await chat.getHistory();
+            const messages = buildPrompt(updatedHistory, finalText, summary || undefined);
+            const newSummary = await ai.generateSummary(messages.map((m) => m.content));
+            await chat.saveSummary(newSummary);
+          } catch (error) {
+            console.error('Error saving AI response:', error);
+          }
+        })()
+      );
+    } else {
+      // Fallback for environments without waitUntil (like local dev)
+      finalTextPromise.then(async (finalText) => {
+        try {
+          await chat.addMessage(finalText);
+          const updatedHistory = await chat.getHistory();
+          const messages = buildPrompt(updatedHistory, finalText, summary || undefined);
+          const newSummary = await ai.generateSummary(messages.map((m) => m.content));
+          await chat.saveSummary(newSummary);
+        } catch (error) {
+          console.error('Error saving AI response:', error);
+        }
+      });
+    }
 
-		return streamResponse;
-		
-	} catch (err) {
-		console.error('handleChatPOST error:', err);
-		return new Response('Internal Error', { status: 500 });
-	}
+    return streamResponse;
+  } catch (err) {
+    console.error('handleChatPOST error:', err);
+    return new Response('Internal Error', { status: 500 });
+  }
 }

@@ -1,7 +1,9 @@
 import { handleChatPOST } from './routes';
 
 export default {
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    (env as any).ctx = ctx;
+    
     const url = new URL(request.url);
     const userId = request.headers.get('x-user-id') || 'default';
 
