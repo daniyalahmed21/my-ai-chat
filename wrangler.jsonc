@@ -30,6 +30,10 @@
 			"fallthrough": true
 		}
 	],
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS"
+	},
 	"ratelimits": [
 		{
 			"name": "MY_RATE_LIMITER",
