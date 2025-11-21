@@ -9,10 +9,6 @@ interface ChatMessageProps {
 }
 
 function ChatMessage({ content, isUser }: ChatMessageProps) {
-  if (!content && !isUser) {
-    return null
-  }
-
   return (
     <div className={`flex items-start gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${

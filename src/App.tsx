@@ -18,6 +18,7 @@ function App() {
     return [{ content: "Hello! I'm your AI assistant powered by Cloudflare Workers AI. How can I help you today?", isUser: false }]
   })
   const [isTyping, setIsTyping] = useState(false)
+  const [streamingMessage, setStreamingMessage] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const userId = useRef(`user-${Math.random().toString(36).substr(2, 9)}`)
 
@@ -37,6 +38,7 @@ function App() {
   const sendMessage = async (message: string) => {
     setMessages(prev => [...prev, { content: message, isUser: true }])
     setIsTyping(true)
+    setStreamingMessage('')
 
     try {
       const response = await fetch('/chat', {
@@ -58,36 +60,31 @@ function App() {
 
       if (reader) {
         setIsTyping(false)
-        setMessages(prev => [...prev, { content: '', isUser: false }])
 
         while (true) {
           const { done, value } = await reader.read()
-          if (done) break
+          if (done) {
+            setMessages(prev => [...prev, { content: fullText, isUser: false }])
+            setStreamingMessage('')
+            break
+          }
 
           const chunk = decoder.decode(value, { stream: true })
           fullText += chunk
-
-          setMessages(prev => {
-            const newMessages = [...prev]
-            newMessages[newMessages.length - 1] = { content: fullText, isUser: false }
-            return newMessages
-          })
+          setStreamingMessage(fullText)
         }
       }
     } catch (error) {
       console.error('Error connecting to API, using mock response:', error)
       setIsTyping(false)
-      setMessages(prev => [...prev, { content: '', isUser: false }])
 
       let fullText = ''
       for await (const chunk of mockChatStream(message)) {
         fullText += chunk
-        setMessages(prev => {
-          const newMessages = [...prev]
-          newMessages[newMessages.length - 1] = { content: fullText, isUser: false }
-          return newMessages
-        })
+        setStreamingMessage(fullText)
       }
+      setMessages(prev => [...prev, { content: fullText, isUser: false }])
+      setStreamingMessage('')
     }
   }
 
@@ -98,9 +95,13 @@ function App() {
       <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
         <div className="w-full max-w-5xl h-[calc(100vh-140px)] bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           <div className="flex-1 overflow-y-auto p-8 space-y-6">
-            {messages.filter(msg => msg.content.trim() !== '').map((msg, index) => (
+            {messages.map((msg, index) => (
               <ChatMessage key={index} content={msg.content} isUser={msg.isUser} />
             ))}
+
+            {streamingMessage && (
+              <ChatMessage content={streamingMessage} isUser={false} />
+            )}
 
             {isTyping && (
               <div className="flex items-start gap-4">
