@@ -35,14 +35,11 @@ function App() {
   }, [messages, streamingMessage])
 
   const sendMessage = async (message: string) => {
-    console.log('sendMessage called with:', message)
     setMessages(prev => [...prev, { content: message, isUser: true }])
-    setStreamingMessage('')
 
     let fullText = ''
 
     try {
-      console.log('Attempting to fetch from /chat')
       const response = await fetch('/chat', {
         method: 'POST',
         headers: {
@@ -63,22 +60,16 @@ function App() {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
-        fullText += chunk
-        console.log('Streaming chunk:', chunk)
+        fullText += decoder.decode(value, { stream: true })
         setStreamingMessage(fullText)
       }
     } catch (error) {
-      console.log('Using mock API:', error)
-
       for await (const chunk of mockChatStream(message)) {
         fullText += chunk
-        console.log('Mock chunk:', chunk, 'Total so far:', fullText)
         setStreamingMessage(fullText)
       }
     }
 
-    console.log('Final message:', fullText)
     setMessages(prev => [...prev, { content: fullText, isUser: false }])
     setStreamingMessage('')
   }
@@ -90,16 +81,12 @@ function App() {
       <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
         <div className="w-full max-w-5xl h-[calc(100vh-140px)] bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           <div className="flex-1 overflow-y-auto p-8 space-y-6">
-            {messages.map((msg, index) => {
-              console.log('Rendering message:', index, msg)
-              return <ChatMessage key={index} content={msg.content} isUser={msg.isUser} />
-            })}
+            {messages.map((msg, index) => (
+              <ChatMessage key={index} content={msg.content} isUser={msg.isUser} />
+            ))}
 
             {streamingMessage && (
-              <>
-                {console.log('Rendering streaming message:', streamingMessage)}
-                <ChatMessage content={streamingMessage} isUser={false} />
-              </>
+              <ChatMessage content={streamingMessage} isUser={false} />
             )}
 
             <div ref={messagesEndRef} />
